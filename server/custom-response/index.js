@@ -71,33 +71,42 @@ const objectCustomizer = (obj, fieldsToRemove, removeExtraImageFields, removeNes
   return obj;
 }
 
-const customResponseGenerator = async (strapi, model) => {
+const customResponseGenerator = async (
+  strapi,
+  model,
+  apiRefUid,
+  unnecessaryFields,
+  removeExtraImageFields,
+  removeNestedFieldsWithSameName
+) => {
   /**
    * Generate a custom response from the query response.
    * @param {Object} strapi - The strapi object
    * @param {Object} model - The model to be populated
+   * @param {String} apiRefUid - The API reference UID
+   * @param {Array} unnecessaryFields - The fields to be removed from the object
+   * @param {Boolean} removeExtraImageFields - If true, only the url and alt fields will be returned
+   * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
    * @returns {Object} - The custom response
    */
-  const fieldsToRemove = ["createdAt", "updatedAt", "publishedAt", "createdBy", "updatedBy"];
-
-  const unnecessaryFields = strapi.plugin('custom-deep-populate')?.config('unnecessaryFields') || fieldsToRemove;
-  const removeExtraImageFields = strapi.plugin('custom-deep-populate')?.config('removeExtraImageFields') || true;
-  const removeNestedFieldsWithSameName = strapi.plugin('custom-deep-populate')?.config('removeNestedFieldsWithSameName') || true;
-
   const ctx = strapi.requestContext.get();
-  const apiRef = ctx.request.url.split('/')[2].split('?')[0];
-  const queryResponse = await strapi.db.query(`api::${apiRef}.${apiRef}`).findMany({populate: model})
+  const queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
 
   let queryResponseCleaned = queryResponse[0];
   queryResponseCleaned = JSON.parse(JSON.stringify(queryResponseCleaned));
 
-  queryResponseCleaned = objectCustomizer(queryResponseCleaned, unnecessaryFields, removeExtraImageFields, removeNestedFieldsWithSameName);
+  queryResponseCleaned = objectCustomizer(
+    queryResponseCleaned,
+    unnecessaryFields,
+    removeExtraImageFields,
+    removeNestedFieldsWithSameName
+  );
 
   ctx.body = {
     customData: queryResponseCleaned,
   };
-}
+};
 
 module.exports = {
   customResponseGenerator
-}
+};
