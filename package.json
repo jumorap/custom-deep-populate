@@ -1,24 +1,47 @@
 {
   "name": "custom-deep-populate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This plugin streamlines the process of populating complex content structures through the REST API. It enables you to specify a custom depth for data retrieval, eliminate unwanted fields, and filter out nested fields with identical names. Best of all, each of these features is fully customizable to suit your specific needs.",
-  "main": "strapi-server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "strapi": {
+    "name": "custom-deep-populate",
+    "description": "This plugin streamlines the process of populating complex content structures through the REST API. It enables you to specify a custom depth for data retrieval, eliminate unwanted fields, and filter out nested fields with identical names. Best of all, each of these features is fully customizable to suit your specific needs.",
+    "kind": "plugin"
   },
+  "dependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jumorap/custom-deep-populate.git"
   },
   "keywords": [
     "strapi",
-    "plugin"
+    "plugin",
+    "deep-populate",
+    "custom-deep-populate",
+    "populate",
+    "nested",
+    "fields",
+    "json",
+    "api customization",
+    "api",
+    "customization",
+    "custom",
+    "data",
+    "rest",
+    "rest api",
+    "javascript"
   ],
   "original": "Christofer Jungberg",
   "author": "jumorap",
-  "license": "ISC",
+  "maintainers": [{
+    "name": "jumorap"
+  }],
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/jumorap/custom-deep-populate/issues"
+  },
+  "engines": {
+    "node": ">=14.19.1 <=21.x.x",
+    "npm": ">=6.0.0"
   },
   "homepage": "https://github.com/jumorap/custom-deep-populate#readme"
 }
