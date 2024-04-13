@@ -1,0 +1,30 @@
+{
+  "name": "custom-deep-populate",
+  "version": "1.0",
+  "description": "Strapi plugin that populates nested content and remove fields from the response.",
+  "strapi": {
+    "name": "custom-deep-populate",
+    "description": "Api helper to populate deep content structures and remove fields from the response.",
+    "kind": "plugin"
+  },
+  "dependencies": {},
+  "author": {
+    "name": "jumorap",
+    "original": "Christofer Jungberg"
+  },
+  "maintainers": [
+    {
+      "name": "jumorap",
+      "original": "Christofer Jungberg"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jumorap/strapi-plugin-deep-populate"
+  },
+  "engines": {
+    "node": ">=14.19.1 <=20.x.x",
+    "npm": ">=6.0.0"
+  },
+  "license": "MIT"
+}
