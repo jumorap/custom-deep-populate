@@ -2,7 +2,7 @@
 
 module.exports = {
   default: {
-    defaultDepth: 5,
+    defaultDepth: 10,
     skipCreatorFields: true,
   },
   validator: () => { },

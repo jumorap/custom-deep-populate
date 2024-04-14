@@ -12,18 +12,23 @@ const removeGenericFields = (obj, fields) => {
   return obj;
 }
 
-const removeImageFields = (obj) => {
+const removeImageFields = (obj, keepFields) => {
   /**
-   * If the object has the fields height, width and url, we can assume that it is an image and return only the url.
+   * If the object has the fields: height, width and url, we can assume that it is an image and return the
+   * fields defined in keepFields. If there is a field that is not in the object, it will be ignored.
    * @param {Object} obj - The object to be checked
+   * @param {Array} keepFields - The fields to be kept in the image object
    * @returns {Object} - The object with the image fields removed
    */
   if (obj)
     if (obj.height && obj.width && obj.url) {
-      obj = {
-        url: obj.url,
-        alt: obj.alternativeText
-      }
+      const newObject = {};
+
+      keepFields.forEach(field => {
+        if (obj[field]) newObject[field] = obj[field];
+      });
+
+      return newObject;
     }
 
   return obj;
@@ -46,26 +51,30 @@ const removeSameNameInNestedFields = (obj) => {
   return obj;
 }
 
-const objectCustomizer = (obj, fieldsToRemove, removeExtraImageFields, removeNestedFieldsWithSameName) => {
+const objectCustomizer = (obj, fieldsToRemove, pickedFieldsInImage, removeNestedFieldsWithSameName) => {
   /**
    * If the object has nested objects, we need to iterate over them using recursion to remove the fields
    * with removeGenericFields, removeSameNameInNestedFields and removeImageFields functions and return
    * the object cleaned.
    * @param {Object} obj - The object to be cleaned
    * @param {Array} fieldsToRemove - The fields to be removed from the object
-   * @param {Boolean} removeExtraImageFields - If true, only the url and alt fields will be returned
+   * @param {Array} pickedFieldsInImage - The fields to be kept in the image object
    * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
    * @returns {Object} - The object cleaned
    */
   if (typeof obj === "object") {
     for (let key in obj)
       if (obj[key] !== null && typeof obj[key] === "object")
-        obj[key] = objectCustomizer(obj[key], fieldsToRemove, removeExtraImageFields, removeNestedFieldsWithSameName);
-
+        obj[key] = objectCustomizer(
+          obj[key],
+          fieldsToRemove,
+          pickedFieldsInImage,
+          removeNestedFieldsWithSameName
+        );
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj);
-    if (removeExtraImageFields) obj = removeImageFields(obj);
+    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
   }
 
   return obj;
@@ -76,7 +85,7 @@ const customResponseGenerator = async (
   model,
   apiRefUid,
   unnecessaryFields,
-  removeExtraImageFields,
+  pickedFieldsInImage,
   removeNestedFieldsWithSameName
 ) => {
   /**
@@ -85,7 +94,7 @@ const customResponseGenerator = async (
    * @param {Object} model - The model to be populated
    * @param {String} apiRefUid - The API reference UID
    * @param {Array} unnecessaryFields - The fields to be removed from the object
-   * @param {Boolean} removeExtraImageFields - If true, only the url and alt fields will be returned
+   * @param {Array} pickedFieldsInImage - The fields to be kept in the image object
    * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
    * @returns {Object} - The custom response
    */
@@ -98,7 +107,7 @@ const customResponseGenerator = async (
   queryResponseCleaned = objectCustomizer(
     queryResponseCleaned,
     unnecessaryFields,
-    removeExtraImageFields,
+    pickedFieldsInImage,
     removeNestedFieldsWithSameName
   );
 
