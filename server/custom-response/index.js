@@ -20,16 +20,15 @@ const removeImageFields = (obj, keepFields) => {
    * @param {Array} keepFields - The fields to be kept in the image object
    * @returns {Object} - The object with the image fields removed
    */
-  if (obj)
-    if (obj.height && obj.width && obj.url) {
-      const newObject = {};
+  if (obj?.height && obj?.width && obj?.url) {
+    const newObject = {};
 
-      keepFields.forEach(field => {
-        if (obj[field]) newObject[field] = obj[field];
-      });
+    keepFields.forEach(field => {
+      if (obj[field]) newObject[field] = obj[field];
+    });
 
-      return newObject;
-    }
+    return newObject;
+  }
 
   return obj;
 }
@@ -102,7 +101,6 @@ const customResponseGenerator = async (
   const queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
 
   let queryResponseCleaned = queryResponse[0];
-  queryResponseCleaned = JSON.parse(JSON.stringify(queryResponseCleaned));
 
   queryResponseCleaned = objectCustomizer(
     queryResponseCleaned,

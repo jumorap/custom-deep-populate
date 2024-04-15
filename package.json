@@ -1,6 +1,6 @@
 {
   "name": "custom-deep-populate",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "This plugin streamlines the process of populating complex content structures through the REST API. It enables you to specify a custom depth for data retrieval, eliminate unwanted fields, and filter out nested fields with identical names. Best of all, each of these features is fully customizable to suit your specific needs.",
   "strapi": {
     "name": "custom-deep-populate",
