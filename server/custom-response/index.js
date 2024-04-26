@@ -1,3 +1,7 @@
+const fs = require('fs');
+const files = fs.readdirSync('./src/api');
+
+
 const removeGenericFields = (obj, fields) => {
   /**
    * Remove the fields from the object.
@@ -33,24 +37,31 @@ const removeImageFields = (obj, keepFields) => {
   return obj;
 }
 
-const removeSameNameInNestedFields = (obj) => {
+const removeSameNameInNestedFields = (obj, collection) => {
   /**
    * Trace the child of the object 1 level deep (if it has) and inside the child check child's
    * if true, replace in the object the child with the child's child, return the object in any case
    * @param {Object} obj - The object to be checked
+   * @param {Array} collection - The list of Collection and Single Types to check to remove
    * @returns {Object} - The object with the child replaced if the child has the same key as the child's child
    */
   for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null && key in obj[key]) {
+    if (typeof obj[key] === 'object' && obj[key] !== null && key in obj[key] && collection.includes(key)) {
       obj[key] = obj[key][key];
-      return removeSameNameInNestedFields(obj);
+      removeSameNameInNestedFields(obj, collection);
     }
   }
 
   return obj;
 }
 
-const objectCustomizer = (obj, fieldsToRemove, pickedFieldsInImage, removeNestedFieldsWithSameName) => {
+const objectCustomizer = (
+  obj,
+  fieldsToRemove,
+  pickedFieldsInImage,
+  removeNestedFieldsWithSameName,
+  collectionNSingleTypes
+) => {
   /**
    * If the object has nested objects, we need to iterate over them using recursion to remove the fields
    * with removeGenericFields, removeSameNameInNestedFields and removeImageFields functions and return
@@ -68,11 +79,12 @@ const objectCustomizer = (obj, fieldsToRemove, pickedFieldsInImage, removeNested
           obj[key],
           fieldsToRemove,
           pickedFieldsInImage,
-          removeNestedFieldsWithSameName
+          removeNestedFieldsWithSameName,
+          collectionNSingleTypes
         );
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
-    if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj);
+    if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
   }
 
@@ -99,6 +111,7 @@ const customResponseGenerator = async (
    */
   const ctx = strapi.requestContext.get();
   const queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
+  const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
 
   let queryResponseCleaned = queryResponse[0];
 
@@ -106,7 +119,8 @@ const customResponseGenerator = async (
     queryResponseCleaned,
     unnecessaryFields,
     pickedFieldsInImage,
-    removeNestedFieldsWithSameName
+    removeNestedFieldsWithSameName,
+    collectionNSingleTypes
   );
 
   ctx.body = {
