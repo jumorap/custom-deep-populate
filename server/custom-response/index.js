@@ -113,6 +113,7 @@ const objectCustomizer = (
 
 const customResponseGenerator = async (
   strapi,
+  event,
   model,
   apiRefUid,
   unnecessaryFields,
@@ -122,6 +123,7 @@ const customResponseGenerator = async (
   /**
    * Generate a custom response from the query response.
    * @param {Object} strapi - The strapi object
+   * @param {Object} event - The event from the lifecycle hook
    * @param {Object} model - The model to be populated
    * @param {String} apiRefUid - The API reference UID
    * @param {Array} unnecessaryFields - The fields to be removed from the object
@@ -130,8 +132,14 @@ const customResponseGenerator = async (
    * @returns {Object} - The custom response
    */
   const ctx = strapi.requestContext.get();
-  const queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
+  const setWhere = event.params?.where; // locale, id, etc...
   const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
+  let queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model, where: setWhere});
+  // IMPORTANT!
+  // When the query doesn't match with the 'where' clause in db,
+  // we need to query without it as if it was a default query.
+  if (queryResponse.length < 1) queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
+
 
   let queryResponseCleaned = queryResponse[0];
 

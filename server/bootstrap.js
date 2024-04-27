@@ -5,13 +5,13 @@ const { customResponseGenerator } = require('./custom-response');
 
 // REWRITTEN OVER "strapi-plugin-populate-deep": "^3.0.1",
 module.exports = async ({ strapi }) => {
-  // Subscribe to the lifecycles that we are intrested in.
+  // Subscribe to the lifecycles that we are interested in.
   await strapi.db.lifecycles.subscribe(async (event) => {
     if (event.action === 'beforeFindMany' || event.action === 'beforeFindOne') {
       const populate = event.params?.populate;
 
       const fieldsToRemove = ["createdAt", "updatedAt", "publishedAt", "createdBy", "updatedBy"];
-      const fieldsInImage = ['url', 'alternativeText'];
+      const fieldsInImage = ["url", "alternativeText"];
 
       const unnecessaryFields = strapi.plugin('custom-deep-populate')?.config('unnecessaryFields') || fieldsToRemove;
       const fieldsToKeepInImage = strapi.plugin('custom-deep-populate')?.config('fieldsToKeepInImage') || fieldsInImage;
@@ -20,11 +20,12 @@ module.exports = async ({ strapi }) => {
 
       if (populate && populate[0] === 'custom') {
         const depth = populate[1] ?? defaultDepth
-        const modelObject = getFullPopulateObject(event.model.uid, depth, []);
+        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields);
 
         // event.params.populate = modelObject.populate // This line was removed kuz generated a response with the full data. It consumes a lot of memory processing data and it's not necessary.
         await customResponseGenerator(
           strapi,
+          event,
           modelObject.populate,
           event.model.uid,
           unnecessaryFields,
