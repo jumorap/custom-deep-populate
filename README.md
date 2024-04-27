@@ -4,6 +4,39 @@ This Strapi plugin streamlines the process of populating complex content structu
 
 ---
 
+## Performance Improvements
+
+With recent optimizations, this plugin delivers even faster performance than similar plugins such as `strapi-plugin-populate-deep`.
+
+- **Request Time Reduction**: The time taken for a request has been reduced from 210ms to 180ms (average) when using the same content manager, resulting in a **14.29% decrease** in request time.
+- **Data Size Reduction**: The size of the returned information has been minimized from 8KB to 3KB (average), indicating a **62.5% reduction** in data size.
+- **File Complexity Reduction**: The complexity of reading files has been significantly reduced, with the average number of lines decreasing from 500 to 200, resulting in a **60% reduction** in file complexity.
+
+| Improvement Type         | strapi-plugin-populate-deep | custom-deep-populate | Percentage Improvement (average) |
+|--------------------------|-----------------------------|----------------------|----------------------------------|
+| Request Time Reduction   | <span style="color:red">210ms</span> | <span style="color:green">180ms</span> | <span style="color:green">14.29%</span> |
+| Data Size Reduction      | <span style="color:red">8KB</span> | <span style="color:green">3KB</span> | <span style="color:green">62.5%</span> |
+| File Complexity Reduction| <span style="color:red">500 lines</span> | <span style="color:green">200 lines</span> | <span style="color:green">60%</span> |
+
+These results were obtained by comparing the performance of the `strapi-plugin-populate-deep` plugin with the `custom-deep-populate` plugin with the next configurations:
+
+```js
+module.exports = ({ env }) => ({
+  'custom-deep-populate': {
+    config: {
+      unnecessaryFields: ["createdAt", "updatedAt", "publishedAt", "createdBy", "updatedBy", "id"],
+      fieldsToKeepInImage: ["url", "alternativeText"],
+      removeNestedFieldsWithSameName: true,
+      defaultDepth: 10,
+    }
+  },
+});
+```
+
+These enhancements ensure that your Strapi experience is not only more efficient but also more responsive, enhancing overall user satisfaction.
+
+---
+
 # Installation
 
 ```sh
