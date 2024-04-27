@@ -55,6 +55,26 @@ const removeSameNameInNestedFields = (obj, collection) => {
   return obj;
 }
 
+const removeCollectionNamesInNested = (obj, collection) => {
+  /**
+   * Trace the child of the object 1 level deep (if it has), only one child and inside the child check child's key
+   * using the collection if the key is included, replace in the object the child with the child's value, return
+   * the object in any case.
+   * From: { "key": { "inCollectionNameName": "value" } } To: { "key": "value" }
+   * @param {Object} obj - The object to be checked
+   * @param {Array} collection - The list of Collection and Single Types to check to remove
+   * @returns {Object} - The object with the child replaced if the child has the same key as the child's child
+   */
+  for (const key in obj) {
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      const childKeys = Object.keys(obj[key]);
+      if (childKeys.length === 1 && collection.includes(childKeys[0])) obj[key] = obj[key][childKeys[0]];
+    }
+  }
+
+  return obj;
+}
+
 const objectCustomizer = (
   obj,
   fieldsToRemove,
@@ -85,6 +105,7 @@ const objectCustomizer = (
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
+    if (collectionNSingleTypes.length > 0) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
     if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
   }
 
