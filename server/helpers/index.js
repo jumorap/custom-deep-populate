@@ -78,7 +78,7 @@ const getRelationPopulate = (target, key, maxDepth, ignore) => {
   );
 };
 
-const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[]) => {
+const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) => {
   /**
    * Get the populated object for the given modelUid and maxDepth level, ignoring the given collection
    * names in the 'ignore' array if provided
@@ -94,12 +94,18 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[]) => {
 
   let populate = {};
   const model = strapi.getModel(modelUid);
+
   if (ignore && !ignore.includes(model.collectionName)) ignore.push(model.collectionName);
+
   for (const [key, value] of Object.entries(
     getModelPopulationAttributes(model)
   )) {
     if (ignore?.includes(key)) continue;
-    populate = populateKey(populate, key, value, maxDepth, ignore);
+    if (specific.length > 0 && specific.includes(key)) {
+      populate = populateKey(populate, key, value, maxDepth, ignore);
+      continue;
+    }
+    if (specific.length === 0) populate = populateKey(populate, key, value, maxDepth, ignore);
   }
 
   return isEmpty(populate) ? true : { populate };
@@ -107,4 +113,4 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[]) => {
 
 module.exports = {
   getFullPopulateObject
-}
+};

@@ -1,6 +1,6 @@
 'use strict';
 
-const { getFullPopulateObject } = require('./helpers')
+const { getFullPopulateObject } = require('./helpers');
 const { customResponseGenerator } = require('./custom-response');
 
 // REWRITTEN OVER "strapi-plugin-populate-deep": "^3.0.1",
@@ -20,10 +20,11 @@ module.exports = async ({ strapi }) => {
 
       if (populate && populate[0] === 'custom') {
         const depth = populate[1] ?? defaultDepth;
-        const newUnnecessaryFields = populate.slice(2, populate.length) ?? [];
+        const newUnnecessaryFields = populate.slice(2, populate.length).filter(item => !item.startsWith('.')) ?? [];
+        const specificFields = populate.slice(2, populate.length).filter(item => item.startsWith('.')).map(item => item.substring(1)) ?? [];
 
         unnecessaryFields = unnecessaryFields.filter(field => !newUnnecessaryFields.includes(field));
-        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields);
+        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields, specificFields);
 
         // event.params.populate = modelObject.populate // This line was removed kuz generated a response with the full data. It consumes a lot of memory processing data and it's not necessary.
         await customResponseGenerator(
@@ -33,7 +34,9 @@ module.exports = async ({ strapi }) => {
           event.model.uid,
           unnecessaryFields,
           fieldsToKeepInImage,
-          removeNestedFieldsWithSameName
+          removeNestedFieldsWithSameName,
+          depth,
+          specificFields
         );
       }
     }

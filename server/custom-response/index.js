@@ -1,5 +1,6 @@
 const fs = require('fs');
 const files = fs.readdirSync('./src/api');
+const { getFullPopulateObject } = require('../helpers');
 
 
 const removeGenericFields = (obj, fields) => {
@@ -112,48 +113,32 @@ const objectCustomizer = (
   return obj;
 }
 
-// const populateComponent = async (strapi, apiRefUid, model, event, componentList=["boton"]) => {
-/**
- * Populate only the components that are in the componentList array.
- * Check each field in model and if it is in the componentList, populate it and just it.
- * If the key is in the componentList, the model is updated, and the fields that are not in
- * the componentList are removed from model, and the component is populated.
- * The model can have a deeply nested object, so we need to iterate over the object using recursion.
- * @param {String} apiRefUid - The API reference UID
- * @param {Object} model - The model to be populated
- * @param {Array} componentList - The list of components to populate
- */
-  // event.params.where = {$and: [{boton: {'$null': false}}]}
-  // return await strapi.db.query(apiRefUid).findMany(event.params);
-// }
-
-
 const makeQueries = async (strapi, event, model, apiRefUid) => {
-    /**
-     * Make the queries to the database, redefine the 'where' clause if necessary and return the response.
-     * @param {Object} strapi - The strapi object
-     * @param {Object} event - The event from the lifecycle hook
-     * @param {Object} model - The model to be populated
-     */
-    let setWhere = event.params?.where; // {} -> locale, etc...
-    const publishFalse = {publishedAt: { '$null': false }};
-    if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
-    else setWhere = { $and: [...setWhere.$and, publishFalse] };
+  /**
+   * Make the queries to the database, redefine the 'where' clause if necessary and return the response.
+   * @param {Object} strapi - The strapi object
+   * @param {Object} event - The event from the lifecycle hook
+   * @param {Object} model - The model to be populated
+   */
+  let setWhere = event.params?.where; // {} -> locale, etc...
+  const publishFalse = {publishedAt: { '$null': false }};
+  if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
+  else setWhere = { $and: [...setWhere.$and, publishFalse] };
 
-    event.params.populate = model;
-    event.params.where = setWhere;
+  event.params.populate = model;
+  event.params.where = setWhere;
 
-    let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
-    // IMPORTANT!
-    // When the query doesn't match with the 'where' clause in db,
-    // we need to query without it as if it was a default query.
-    if (queryResponse.length < 1) {
-      event.params.where = {};
-      queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
-    }
-
-    return queryResponse.length > 1 ? queryResponse : queryResponse[0];
+  let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
+  // IMPORTANT!
+  // When the query doesn't match with the 'where' clause in db,
+  // we need to query without it as if it was a default query.
+  if (queryResponse.length < 1) {
+    event.params.where = {};
+    queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   }
+
+  return queryResponse.length > 1 ? queryResponse : queryResponse[0];
+}
 
 const getMeta = async (event, apiRefUid) => {
   /**
@@ -162,12 +147,10 @@ const getMeta = async (event, apiRefUid) => {
    * @param {String} apiRefUid - The API reference UID
    * @returns {Object} - The meta object
    */
-  let meta = {};
-
   if (event?.params?.limit) {
     const [data, counter] = await strapi.db.query(apiRefUid).findWithCount({limit: 1});
 
-    meta = {
+    return {
       pagination:{
         pageSize: event?.params?.limit,
         page: event?.params?.offset + 1,
@@ -177,7 +160,7 @@ const getMeta = async (event, apiRefUid) => {
     };
   }
 
-  return meta;
+  return {};
 }
 
 const customResponseGenerator = async (
@@ -187,7 +170,9 @@ const customResponseGenerator = async (
   apiRefUid,
   unnecessaryFields,
   pickedFieldsInImage,
-  removeNestedFieldsWithSameName
+  removeNestedFieldsWithSameName,
+  depth,
+  specificFields
 ) => {
   /**
    * Generate a custom response from the query response.
@@ -198,6 +183,8 @@ const customResponseGenerator = async (
    * @param {Array} unnecessaryFields - The fields to be removed from the object
    * @param {Array} pickedFieldsInImage - The fields to be kept in the image object
    * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
+   * @param {Number} depth - The depth level to populate
+   * @param {Array} specificFields - The specific fields to be populated
    * @returns {Object} - The custom response
    */
   const ctx = strapi.requestContext.get();
@@ -205,6 +192,7 @@ const customResponseGenerator = async (
 
   const queryResponseCleaned = await makeQueries(strapi, event, model, apiRefUid);
   const meta = await getMeta(event, apiRefUid);
+  const specific = {}
 
   const cleanedResponse = objectCustomizer(
     queryResponseCleaned,
@@ -216,7 +204,8 @@ const customResponseGenerator = async (
 
   ctx.send({
     customData: cleanedResponse,
-    meta: meta
+    meta: meta,
+    specific: specific
   });
 };
 
