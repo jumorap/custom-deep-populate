@@ -81,6 +81,19 @@ Or
 /api/articles/1?populate=custom,5
 ```
 
+Populate a request with a custom depth and remove fields from unnecessary fields
+(in `config.js`/`config.ts`) using the `remove` keyword.
+
+```
+/api/articles?populate=custom,<int>,<string>,<string>,...,<string>
+```
+
+For example, to populate a request with a custom depth of 5 and remove the unnecessary fields `createdAt` and `updatedAt`:
+
+```
+/api/articles?populate=custom,5,createdAt,updatedAt
+```
+
 ## Good to know
 
 The default max depth is 10 levels deep.

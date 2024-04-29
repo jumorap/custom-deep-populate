@@ -140,8 +140,7 @@ const customResponseGenerator = async (
   // we need to query without it as if it was a default query.
   if (queryResponse.length < 1) queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
 
-
-  let queryResponseCleaned = queryResponse[0];
+  let queryResponseCleaned = queryResponse.length > 1 ? queryResponse : queryResponse[0];
 
   queryResponseCleaned = objectCustomizer(
     queryResponseCleaned,
