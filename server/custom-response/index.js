@@ -132,13 +132,24 @@ const customResponseGenerator = async (
    * @returns {Object} - The custom response
    */
   const ctx = strapi.requestContext.get();
-  const setWhere = event.params?.where; // locale, id, etc...
   const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
-  let queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model, where: setWhere});
+
+  let setWhere = event.params?.where; // {} -> locale, etc...
+  const publishFalse = {publishedAt: { '$null': false }};
+  if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
+  else setWhere = { $and: [...setWhere.$and, publishFalse] };
+
+  event.params.populate = model;
+  event.params.where = setWhere;
+
+  let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   // IMPORTANT!
   // When the query doesn't match with the 'where' clause in db,
   // we need to query without it as if it was a default query.
-  if (queryResponse.length < 1) queryResponse = await strapi.db.query(apiRefUid).findMany({populate: model});
+  if (queryResponse.length < 1) {
+    event.params.where = {};
+    queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
+  }
 
   let queryResponseCleaned = queryResponse.length > 1 ? queryResponse : queryResponse[0];
 
@@ -150,9 +161,12 @@ const customResponseGenerator = async (
     collectionNSingleTypes
   );
 
-  ctx.body = {
+  const meta = ctx?.query?.pagination;
+
+  ctx.send({
     customData: queryResponseCleaned,
-  };
+    meta: meta
+  });
 };
 
 module.exports = {

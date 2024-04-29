@@ -94,7 +94,7 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[]) => {
 
   let populate = {};
   const model = strapi.getModel(modelUid);
-  if (ignore && !ignore.includes(model.collectionName)) ignore.push(model.collectionName)
+  if (ignore && !ignore.includes(model.collectionName)) ignore.push(model.collectionName);
   for (const [key, value] of Object.entries(
     getModelPopulationAttributes(model)
   )) {
