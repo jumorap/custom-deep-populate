@@ -102,6 +102,7 @@ const objectCustomizer = (
           removeNestedFieldsWithSameName,
           collectionNSingleTypes
         );
+
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
@@ -109,6 +110,74 @@ const objectCustomizer = (
   }
 
   return obj;
+}
+
+// const populateComponent = async (strapi, apiRefUid, model, event, componentList=["boton"]) => {
+/**
+ * Populate only the components that are in the componentList array.
+ * Check each field in model and if it is in the componentList, populate it and just it.
+ * If the key is in the componentList, the model is updated, and the fields that are not in
+ * the componentList are removed from model, and the component is populated.
+ * The model can have a deeply nested object, so we need to iterate over the object using recursion.
+ * @param {String} apiRefUid - The API reference UID
+ * @param {Object} model - The model to be populated
+ * @param {Array} componentList - The list of components to populate
+ */
+  // event.params.where = {$and: [{boton: {'$null': false}}]}
+  // return await strapi.db.query(apiRefUid).findMany(event.params);
+// }
+
+
+const makeQueries = async (strapi, event, model, apiRefUid) => {
+    /**
+     * Make the queries to the database, redefine the 'where' clause if necessary and return the response.
+     * @param {Object} strapi - The strapi object
+     * @param {Object} event - The event from the lifecycle hook
+     * @param {Object} model - The model to be populated
+     */
+    let setWhere = event.params?.where; // {} -> locale, etc...
+    const publishFalse = {publishedAt: { '$null': false }};
+    if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
+    else setWhere = { $and: [...setWhere.$and, publishFalse] };
+
+    event.params.populate = model;
+    event.params.where = setWhere;
+
+    let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
+    // IMPORTANT!
+    // When the query doesn't match with the 'where' clause in db,
+    // we need to query without it as if it was a default query.
+    if (queryResponse.length < 1) {
+      event.params.where = {};
+      queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
+    }
+
+    return queryResponse.length > 1 ? queryResponse : queryResponse[0];
+  }
+
+const getMeta = async (event, apiRefUid) => {
+  /**
+   * Generate the meta object with the pagination data.
+   * @param {Object} event - The event from the lifecycle hook
+   * @param {String} apiRefUid - The API reference UID
+   * @returns {Object} - The meta object
+   */
+  let meta = {};
+
+  if (event?.params?.limit) {
+    const [data, counter] = await strapi.db.query(apiRefUid).findWithCount({limit: 1});
+
+    meta = {
+      pagination:{
+        pageSize: event?.params?.limit,
+        page: event?.params?.offset + 1,
+        total: counter,
+        pageCount: Math.ceil(counter / event?.params?.limit)
+      }
+    };
+  }
+
+  return meta;
 }
 
 const customResponseGenerator = async (
@@ -134,26 +203,10 @@ const customResponseGenerator = async (
   const ctx = strapi.requestContext.get();
   const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
 
-  let setWhere = event.params?.where; // {} -> locale, etc...
-  const publishFalse = {publishedAt: { '$null': false }};
-  if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
-  else setWhere = { $and: [...setWhere.$and, publishFalse] };
+  const queryResponseCleaned = await makeQueries(strapi, event, model, apiRefUid);
+  const meta = await getMeta(event, apiRefUid);
 
-  event.params.populate = model;
-  event.params.where = setWhere;
-
-  let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
-  // IMPORTANT!
-  // When the query doesn't match with the 'where' clause in db,
-  // we need to query without it as if it was a default query.
-  if (queryResponse.length < 1) {
-    event.params.where = {};
-    queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
-  }
-
-  let queryResponseCleaned = queryResponse.length > 1 ? queryResponse : queryResponse[0];
-
-  queryResponseCleaned = objectCustomizer(
+  const cleanedResponse = objectCustomizer(
     queryResponseCleaned,
     unnecessaryFields,
     pickedFieldsInImage,
@@ -161,23 +214,8 @@ const customResponseGenerator = async (
     collectionNSingleTypes
   );
 
-  const [data, counter] = await strapi.db.query(apiRefUid).findWithCount({
-    where: setWhere,
-    offset: event.params?.offset,
-    limit: 1
-  });
-
-  const meta = {
-    pagination:{
-      pageSize: event?.params?.limit,
-      page: event?.params?.offset + 1,
-      total: counter,
-      pageCount: Math.ceil(counter / event?.params?.limit)
-    }
-  };
-
   ctx.send({
-    customData: queryResponseCleaned,
+    customData: cleanedResponse,
     meta: meta
   });
 };
