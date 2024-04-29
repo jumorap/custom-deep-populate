@@ -161,7 +161,20 @@ const customResponseGenerator = async (
     collectionNSingleTypes
   );
 
-  const meta = ctx?.query?.pagination;
+  const [data, counter] = await strapi.db.query(apiRefUid).findWithCount({
+    where: setWhere,
+    offset: event.params?.offset,
+    limit: 1
+  });
+
+  const meta = {
+    pagination:{
+      pageSize: event?.params?.limit,
+      page: event?.params?.offset + 1,
+      total: counter,
+      pageCount: Math.ceil(counter / event?.params?.limit)
+    }
+  };
 
   ctx.send({
     customData: queryResponseCleaned,
