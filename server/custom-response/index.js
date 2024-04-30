@@ -79,6 +79,21 @@ const removeCollectionNamesInNested = (obj, collection) => {
   return obj;
 }
 
+const cleanEmpty = (arrFields) => {
+  /**
+   * Remove the empty objects from the array.
+   * @param {Array} arrFields - The array to be cleaned
+   * @returns {Array} - The cleaned array
+   */
+  return arrFields.filter(field => {
+    for (const key in field) {
+      if (Array.isArray(field[key]) && field[key].length > 0) return true;
+      if (typeof field[key] === 'object' && Object.keys(field[key]).length > 0) return true;
+    }
+    return false;
+  })
+}
+
 const getSpecificFields = (obj, fields) => {
   /**
    * Get the specific fields from the object and return the object with only the specific fields.
@@ -228,9 +243,9 @@ const customResponseGenerator = async (
 
   if (specificFields.length > 0) {
     const newModel = getFullPopulateObject(apiRefUid, depth, unnecessaryFields, []);
-    const strapiResponse = await strapi.db.query(apiRefUid).findMany({populate: newModel.populate});
+    const strapiResponse = await strapi.db.query(apiRefUid).findMany({populate: newModel.populate, where: { $and: [{publishedAt: { '$null': false }}] }});
 
-    specificResponse = objectCustomizer(
+    objectCustomizer(
       strapiResponse,
       unnecessaryFields,
       pickedFieldsInImage,
@@ -239,7 +254,7 @@ const customResponseGenerator = async (
       specificFields
     );
 
-    specificResponse = JSON.parse(JSON.stringify(speFields));
+    specificResponse = cleanEmpty(JSON.parse(JSON.stringify(speFields)));
     speFields = [];
   }
 
