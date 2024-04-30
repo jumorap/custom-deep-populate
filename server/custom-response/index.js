@@ -76,12 +76,28 @@ const removeCollectionNamesInNested = (obj, collection) => {
   return obj;
 }
 
+const getSpecificFields = (obj, fields) => {
+  /**
+   * Get the specific fields from the object and return the object with only the specific fields.
+   * @param {Object} obj - The object to be checked
+   * @param {Array} fields - The specific fields to be populated
+   * @returns {Object} - The object with the specific fields
+   */
+  const newObj = {};
+  fields.forEach(field => {
+    if (obj[field]) newObj[field] = obj[field];
+  });
+
+  if (Object.keys(newObj).length > 0) return newObj;
+}
+
 const objectCustomizer = (
   obj,
   fieldsToRemove,
   pickedFieldsInImage,
   removeNestedFieldsWithSameName,
-  collectionNSingleTypes
+  collectionNSingleTypes,
+  specificFields
 ) => {
   /**
    * If the object has nested objects, we need to iterate over them using recursion to remove the fields
@@ -101,13 +117,19 @@ const objectCustomizer = (
           fieldsToRemove,
           pickedFieldsInImage,
           removeNestedFieldsWithSameName,
-          collectionNSingleTypes
+          collectionNSingleTypes,
+          specificFields
         );
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
     if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
+
+    if (specificFields.length > 0) {
+      const speFields = getSpecificFields(obj, specificFields)
+      if (speFields) obj = speFields;
+    }
   }
 
   return obj;
@@ -122,8 +144,9 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
    */
   let setWhere = event.params?.where; // {} -> locale, etc...
   const publishFalse = {publishedAt: { '$null': false }};
-  if (!setWhere?.$and) setWhere = { $and: [publishFalse] };
-  else setWhere = { $and: [...setWhere.$and, publishFalse] };
+
+  if (!setWhere) setWhere = { $and: [publishFalse] };
+  else if (setWhere?.$and) setWhere = { $and: [...setWhere?.$and, publishFalse] };
 
   event.params.populate = model;
   event.params.where = setWhere;
@@ -192,20 +215,35 @@ const customResponseGenerator = async (
 
   const queryResponseCleaned = await makeQueries(strapi, event, model, apiRefUid);
   const meta = await getMeta(event, apiRefUid);
-  const specific = {}
+  let specificResponse = {};
 
   const cleanedResponse = objectCustomizer(
     queryResponseCleaned,
     unnecessaryFields,
     pickedFieldsInImage,
     removeNestedFieldsWithSameName,
-    collectionNSingleTypes
+    collectionNSingleTypes,
+    []
   );
+
+  if (specificFields.length > 0) {
+    const newModel = getFullPopulateObject(apiRefUid, depth, unnecessaryFields, specificFields);
+    const strapiResponse = await strapi.db.query(apiRefUid).findMany({populate: newModel.populate});
+
+    specificResponse = objectCustomizer(
+      strapiResponse,
+      unnecessaryFields,
+      pickedFieldsInImage,
+      removeNestedFieldsWithSameName,
+      collectionNSingleTypes,
+      specificFields
+    );
+  }
 
   ctx.send({
     customData: cleanedResponse,
     meta: meta,
-    specific: specific
+    specific: specificResponse
   });
 };
 

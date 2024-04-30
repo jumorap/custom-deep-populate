@@ -24,7 +24,7 @@ module.exports = async ({ strapi }) => {
         const specificFields = populate.slice(2, populate.length).filter(item => item.startsWith('.')).map(item => item.substring(1)) ?? [];
 
         unnecessaryFields = unnecessaryFields.filter(field => !newUnnecessaryFields.includes(field));
-        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields, specificFields);
+        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []);
 
         // event.params.populate = modelObject.populate // This line was removed kuz generated a response with the full data. It consumes a lot of memory processing data and it's not necessary.
         await customResponseGenerator(
