@@ -3,6 +3,9 @@ const files = fs.readdirSync('./src/api');
 const { getFullPopulateObject } = require('../helpers');
 
 
+let speFields = [];
+
+
 const removeGenericFields = (obj, fields) => {
   /**
    * Remove the fields from the object.
@@ -88,7 +91,7 @@ const getSpecificFields = (obj, fields) => {
     if (obj[field]) newObj[field] = obj[field];
   });
 
-  if (Object.keys(newObj).length > 0) return newObj;
+  if (Object.keys(newObj).length > 0) speFields.push(newObj);
 }
 
 const objectCustomizer = (
@@ -126,10 +129,7 @@ const objectCustomizer = (
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
     if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
 
-    if (specificFields.length > 0) {
-      const speFields = getSpecificFields(obj, specificFields)
-      if (speFields) obj = speFields;
-    }
+    if (specificFields.length > 0) getSpecificFields(obj, specificFields);
   }
 
   return obj;
@@ -227,7 +227,7 @@ const customResponseGenerator = async (
   );
 
   if (specificFields.length > 0) {
-    const newModel = getFullPopulateObject(apiRefUid, depth, unnecessaryFields, specificFields);
+    const newModel = getFullPopulateObject(apiRefUid, depth, unnecessaryFields, []);
     const strapiResponse = await strapi.db.query(apiRefUid).findMany({populate: newModel.populate});
 
     specificResponse = objectCustomizer(
@@ -238,6 +238,9 @@ const customResponseGenerator = async (
       collectionNSingleTypes,
       specificFields
     );
+
+    specificResponse = JSON.parse(JSON.stringify(speFields));
+    speFields = [];
   }
 
   ctx.send({
