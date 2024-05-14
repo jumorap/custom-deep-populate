@@ -20,12 +20,13 @@ const removeGenericFields = (obj, fields) => {
   return obj;
 }
 
-const removeImageFields = (obj, keepFields) => {
+const removeImageFields = (obj, keepFields, imageFormats) => {
   /**
    * If the object has the fields: height, width and url, we can assume that it is an image and return the
    * fields defined in keepFields. If there is a field that is not in the object, it will be ignored.
    * @param {Object} obj - The object to be checked
    * @param {Array} keepFields - The fields to be kept in the image object
+   * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
    * @returns {Object} - The object with the image fields removed
    */
   if (obj?.height && obj?.width && obj?.url) {
@@ -34,6 +35,13 @@ const removeImageFields = (obj, keepFields) => {
     keepFields.forEach(field => {
       if (obj[field]) newObject[field] = obj[field];
     });
+
+    if (imageFormats && obj?.formats) {
+      newObject.urlThumb = obj.formats?.thumbnail?.url;
+      newObject.urlM = obj.formats?.medium?.url;
+      newObject.urlS = obj.formats?.small?.url;
+      newObject.urlL = obj.formats?.large?.url;
+    }
 
     return newObject;
   }
@@ -115,7 +123,8 @@ const objectCustomizer = (
   pickedFieldsInImage,
   removeNestedFieldsWithSameName,
   collectionNSingleTypes,
-  specificFields
+  specificFields,
+  imageFormats
 ) => {
   /**
    * If the object has nested objects, we need to iterate over them using recursion to remove the fields
@@ -125,6 +134,9 @@ const objectCustomizer = (
    * @param {Array} fieldsToRemove - The fields to be removed from the object
    * @param {Array} pickedFieldsInImage - The fields to be kept in the image object
    * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
+   * @param {Array} collectionNSingleTypes - The list of Collection and Single Types to check to remove
+   * @param {Array} specificFields - The specific fields to be populated
+   * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
    * @returns {Object} - The object cleaned
    */
   if (typeof obj === "object") {
@@ -136,13 +148,14 @@ const objectCustomizer = (
           pickedFieldsInImage,
           removeNestedFieldsWithSameName,
           collectionNSingleTypes,
-          specificFields
+          specificFields,
+          imageFormats
         );
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
-    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage);
+    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage, imageFormats);
 
     if (specificFields.length > 0) getSpecificFields(obj, specificFields);
   }
@@ -210,7 +223,8 @@ const customResponseGenerator = async (
   pickedFieldsInImage,
   removeNestedFieldsWithSameName,
   depth,
-  specificFields
+  specificFields,
+  imageFormats
 ) => {
   /**
    * Generate a custom response from the query response.
@@ -223,6 +237,7 @@ const customResponseGenerator = async (
    * @param {Boolean} removeNestedFieldsWithSameName - If true, the child will be replaced by the child's child
    * @param {Number} depth - The depth level to populate
    * @param {Array} specificFields - The specific fields to be populated
+   * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
    * @returns {Object} - The custom response
    */
   const ctx = strapi.requestContext.get();
@@ -238,7 +253,8 @@ const customResponseGenerator = async (
     pickedFieldsInImage,
     removeNestedFieldsWithSameName,
     collectionNSingleTypes,
-    []
+    [],
+    imageFormats
   );
 
   if (specificFields.length > 0) {
@@ -251,7 +267,8 @@ const customResponseGenerator = async (
       pickedFieldsInImage,
       removeNestedFieldsWithSameName,
       collectionNSingleTypes,
-      specificFields
+      specificFields,
+      imageFormats
     );
 
     specificResponse = cleanEmpty(JSON.parse(JSON.stringify(speFields)));

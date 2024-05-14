@@ -14,9 +14,10 @@ module.exports = async ({ strapi }) => {
       const fieldsInImage = ["url", "alternativeText"];
 
       let unnecessaryFields = strapi.plugin('custom-deep-populate')?.config('unnecessaryFields') || fieldsToRemove;
+      let imageFormats = strapi.plugin('custom-deep-populate')?.config('imageFormats') || false;
       const fieldsToKeepInImage = strapi.plugin('custom-deep-populate')?.config('fieldsToKeepInImage') || fieldsInImage;
       const removeNestedFieldsWithSameName = strapi.plugin('custom-deep-populate')?.config('removeNestedFieldsWithSameName') || true;
-      const defaultDepth = strapi.plugin('custom-deep-populate')?.config('defaultDepth') || 10
+      const defaultDepth = strapi.plugin('custom-deep-populate')?.config('defaultDepth') || 10;
 
       if (populate && populate[0] === 'custom') {
         const depth = populate[1] ?? defaultDepth;
@@ -25,6 +26,8 @@ module.exports = async ({ strapi }) => {
 
         unnecessaryFields = unnecessaryFields.filter(field => !newUnnecessaryFields.includes(field));
         const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []);
+
+        if (newUnnecessaryFields.includes('imageFormats')) imageFormats = true;
 
         // event.params.populate = modelObject.populate // This line was removed kuz generated a response with the full data. It consumes a lot of memory processing data and it's not necessary.
         await customResponseGenerator(
@@ -36,7 +39,8 @@ module.exports = async ({ strapi }) => {
           fieldsToKeepInImage,
           removeNestedFieldsWithSameName,
           depth,
-          specificFields
+          specificFields,
+          imageFormats
         );
       }
     }

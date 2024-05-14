@@ -117,6 +117,7 @@ module.exports = ({ env }) => ({
       unnecessaryFields: [], // OPTIONAL -> Default: ["createdAt", "updatedAt", "publishedAt", "createdBy", "updatedBy"]
       fieldsToKeepInImage: [], // OPTIONAL -> Default: ["url", "alternativeText"]
       removeNestedFieldsWithSameName: true, // OPTIONAL -> Default: true
+      imageFormats: false, // OPTIONAL -> Default: false (requires fieldsToKeepInImage to be set with the value "url" in the array in config.js/config.ts)
       defaultDepth: 10, // OPTIONAL -> Default: 10
     }
   },
@@ -134,6 +135,7 @@ export default {
       unnecessaryFields: [], // OPTIONAL -> Default: ["createdAt", "updatedAt", "publishedAt", "createdBy", "updatedBy"]
       fieldsToKeepInImage: [], // OPTIONAL -> Default: ["url", "alternativeText"]
       removeNestedFieldsWithSameName: true, // OPTIONAL -> Default: true
+      imageFormats: false, // OPTIONAL -> Default: false (requires fieldsToKeepInImage to be set with the value "url" in the array in config.js/config.ts)
       defaultDepth: 10, // OPTIONAL -> Default: 10
     }
   },
@@ -144,7 +146,12 @@ export default {
 1. `unnecessaryFields` - An **array** of fields that should be removed from the response. When the array is empty, the response will contain all fields.
 2. `fieldsToKeepInImage` - An **array** of fields that should be kept in the image response. When the array is empty, the response will contain only the url and alternativeText fields.
 3. `removeNestedFieldsWithSameName` - A **boolean** that determines whether nested fields with the same name should be removed from the response. When set to true, the response will contain only the first field with the same name. F.E. if there is a field nestes as `{icon: {icon: "iconName"}}` where `icon` is the same name, the response will contain only the first `icon` field as `{icon: "iconName"}`. _NOTE: Used usually when has collections with the same name as the nested field._
-4. `defaultDepth` - An **integer** that determines the default depth for the populate deep option. When set to 10, the response will contain data up to 10 levels deep.
+4. `imageFormats` - A **boolean** that allow to get the image formats in the image response. When set to true, the response will contain the formats of the image. F.E. Will contain the urls of the image in the different available formats in the current image (thumbnail, small, medium, large, etc). _NOTE: Requires fieldsToKeepInImage to be set with the value "url" in the array in config.js/config.ts._
+   - **NOTE**: To get the image formats in the image response in a specific endpoint, can use `imageFormats` directly in the query string as:
+   ```
+   api/articles?populate=custom,10,...,imageFormats,...
+   ``` 
+5. `defaultDepth` - An **integer** that determines the default depth for the populate deep option. When set to 10, the response will contain data up to 10 levels deep.
 
 ---
 
