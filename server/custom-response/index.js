@@ -179,7 +179,7 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
   event.params.populate = model;
   event.params.where = setWhere;
 
-  const whereIdentifiers = ['$eq', '$in'];
+  const whereIdentifiers = ['$eq', '$in', '$gt', '$gte', '$lte', '$lt', '$ne', '$nin', '$contains', '$containsi', '$ncontains'];
   const whereSave = JSON.stringify(event.params.where);
   const whereHasEqOrIn = whereIdentifiers.some(identifier => JSON.stringify(whereSave).includes(identifier));
 
