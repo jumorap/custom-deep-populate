@@ -179,10 +179,9 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
   event.params.populate = model;
   event.params.where = setWhere;
 
-  const whereIdentifiers = ['$eq', '$in', '$gt', '$gte', '$lte', '$lt', '$ne', '$nin', '$contains', '$containsi', '$ncontains'];
+  const whereIdentifiers = ['$not', '$eq', '$eqi', '$ne', '$nei', '$in', '$notIn', '$lt', '$lte', '$gt', '$gte', '$nin', '$between', '$contains', '$notContains', '$containsi', '$notContainsi', '$startsWith', '$endsWith', '$null', '$notNull'];
   const whereSave = JSON.stringify(event.params.where);
   const whereHasEqOrIn = whereIdentifiers.some(identifier => JSON.stringify(whereSave).includes(identifier));
-
   let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   // IMPORTANT!
   // When the query doesn't match with the 'where' clause in db,
