@@ -179,9 +179,9 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
   event.params.populate = model;
   event.params.where = setWhere;
 
-  // Check if where has $eq or $in as {where: { valueX: { '$eq': 'no' } }} or {where: { valueY: { '$eq': 'no' } }} or {where: { valueZ: { '$in': ['no', 'yes'] } }}
-  let whereHasEqOrIn = false;
-  for (const key in event.params.where) if (typeof event.params.where[key] === 'object') if (event.params.where[key].$eq || event.params.where[key].$in) whereHasEqOrIn = true;
+  const whereIdentifiers = ['$eq', '$in'];
+  const whereSave = JSON.stringify(event.params.where);
+  const whereHasEqOrIn = whereIdentifiers.some(identifier => JSON.stringify(whereSave).includes(identifier));
 
   let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   // IMPORTANT!
