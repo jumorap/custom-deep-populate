@@ -179,11 +179,15 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
   event.params.populate = model;
   event.params.where = setWhere;
 
+  // Check if where has $eq or $in as {where: { valueX: { '$eq': 'no' } }} or {where: { valueY: { '$eq': 'no' } }} or {where: { valueZ: { '$in': ['no', 'yes'] } }}
+  let whereHasEqOrIn = false;
+  for (const key in event.params.where) if (typeof event.params.where[key] === 'object') if (event.params.where[key].$eq || event.params.where[key].$in) whereHasEqOrIn = true;
+
   let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   // IMPORTANT!
   // When the query doesn't match with the 'where' clause in db,
   // we need to query without it as if it was a default query.
-  if (queryResponse.length < 1) {
+  if (queryResponse.length < 1 && !whereHasEqOrIn) {
     event.params.where = {};
     queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   }
@@ -276,7 +280,7 @@ const customResponseGenerator = async (
   }
 
   ctx.send({
-    customData: cleanedResponse,
+    customData: (cleanedResponse || []),
     meta: meta,
     specific: specificResponse
   });
