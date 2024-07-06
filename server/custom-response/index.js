@@ -20,17 +20,18 @@ const removeGenericFields = (obj, fields) => {
   return obj;
 }
 
-const removeImageFields = (obj, keepFields, imageFormats) => {
+const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
   /**
    * If the object has the fields: height, width and url, we can assume that it is an image and return the
    * fields defined in keepFields. If there is a field that is not in the object, it will be ignored.
    * @param {Object} obj - The object to be checked
    * @param {Array} keepFields - The fields to be kept in the image object
    * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
+   * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
    * @returns {Object} - The object with the image fields removed
    */
   if (obj?.height && obj?.width && obj?.url) {
-    const newObject = {};
+    let newObject = {};
 
     keepFields.forEach(field => {
       if (obj[field]) newObject[field] = obj[field];
@@ -43,22 +44,10 @@ const removeImageFields = (obj, keepFields, imageFormats) => {
       newObject.urlL = obj.formats?.large?.url;
     }
 
+    if (imageInline) newObject = newObject.url
+
     return newObject;
   }
-
-  return obj;
-}
-
-const setImageInline = (obj, keepFields, imageInline) => {
-  /**
-   * If the object has the fields: height, width and url, we can assume that it is an image and return the
-   * fields defined in keepFields. If there is a field that is not in the object, it will be ignored.
-   * @param {Object} obj - The object to be checked
-   * @param {Array} keepFields - The fields to be kept in the image object
-   * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
-   * @returns {Object} - The object with the image fields removed
-   */
-  if (obj?.height && obj?.width && obj?.url) obj = obj.url;
 
   return obj;
 }
@@ -172,8 +161,7 @@ const objectCustomizer = (
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
-    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage, imageFormats);
-    if (pickedFieldsInImage.length > 0) obj = setImageInline(obj, pickedFieldsInImage, imageInline);
+    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage, imageFormats, imageInline);
 
     if (specificFields.length > 0) getSpecificFields(obj, specificFields);
   }
