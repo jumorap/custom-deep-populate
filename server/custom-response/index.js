@@ -49,6 +49,20 @@ const removeImageFields = (obj, keepFields, imageFormats) => {
   return obj;
 }
 
+const setImageInline = (obj, keepFields, imageInline) => {
+  /**
+   * If the object has the fields: height, width and url, we can assume that it is an image and return the
+   * fields defined in keepFields. If there is a field that is not in the object, it will be ignored.
+   * @param {Object} obj - The object to be checked
+   * @param {Array} keepFields - The fields to be kept in the image object
+   * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
+   * @returns {Object} - The object with the image fields removed
+   */
+  if (obj?.height && obj?.width && obj?.url) obj = obj.url;
+
+  return obj;
+}
+
 const removeSameNameInNestedFields = (obj, collection) => {
   /**
    * Trace the child of the object 1 level deep (if it has) and inside the child check child's
@@ -124,7 +138,8 @@ const objectCustomizer = (
   removeNestedFieldsWithSameName,
   collectionNSingleTypes,
   specificFields,
-  imageFormats
+  imageFormats,
+  imageInline
 ) => {
   /**
    * If the object has nested objects, we need to iterate over them using recursion to remove the fields
@@ -137,6 +152,7 @@ const objectCustomizer = (
    * @param {Array} collectionNSingleTypes - The list of Collection and Single Types to check to remove
    * @param {Array} specificFields - The specific fields to be populated
    * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
+   * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
    * @returns {Object} - The object cleaned
    */
   if (typeof obj === "object") {
@@ -149,13 +165,15 @@ const objectCustomizer = (
           removeNestedFieldsWithSameName,
           collectionNSingleTypes,
           specificFields,
-          imageFormats
+          imageFormats,
+          imageInline
         );
 
     if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
     if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
     if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
     if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage, imageFormats);
+    if (pickedFieldsInImage.length > 0) obj = setImageInline(obj, pickedFieldsInImage, imageInline);
 
     if (specificFields.length > 0) getSpecificFields(obj, specificFields);
   }
@@ -227,7 +245,8 @@ const customResponseGenerator = async (
   removeNestedFieldsWithSameName,
   depth,
   specificFields,
-  imageFormats
+  imageFormats,
+  imageInline
 ) => {
   /**
    * Generate a custom response from the query response.
@@ -241,7 +260,7 @@ const customResponseGenerator = async (
    * @param {Number} depth - The depth level to populate
    * @param {Array} specificFields - The specific fields to be populated
    * @param {Boolean} imageFormats - If true, the field 'formats' will be kept in the object
-   * @returns {Object} - The custom response
+   * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
    */
   const ctx = strapi.requestContext.get();
   const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
@@ -257,7 +276,8 @@ const customResponseGenerator = async (
     removeNestedFieldsWithSameName,
     collectionNSingleTypes,
     [],
-    imageFormats
+    imageFormats,
+    imageInline
   );
 
   if (specificFields.length > 0) {
@@ -271,7 +291,8 @@ const customResponseGenerator = async (
       removeNestedFieldsWithSameName,
       collectionNSingleTypes,
       specificFields,
-      imageFormats
+      imageFormats,
+      imageInline
     );
 
     specificResponse = cleanEmpty(JSON.parse(JSON.stringify(speFields)));
