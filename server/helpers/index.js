@@ -123,13 +123,15 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) =>
   return isEmpty(populate) ? true : { populate };
 };
 
-const setFalseNoMedia = (model) => {
+const setFalseNoMedia = (model, imageInline) => {
   /**
    * Reach the deepest level of the model object in each key and set the pushOn to false in each child
    * if the type of each child is not media and the field pushOn is not an object
    * @param model - The model object
    * @returns {Object} - The model object with the pushOn value as the field value in each key
    */
+  if (imageInline) return model;
+
   const keys = Object.keys(model.populate);
   for (const element of keys) {
     const key = element;

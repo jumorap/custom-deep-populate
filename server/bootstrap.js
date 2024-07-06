@@ -22,15 +22,16 @@ module.exports = async ({ strapi }) => {
 
       if (populate && populate[0] === 'custom') {
         let depth = populate[1] ?? defaultDepth;
-        depth = Number(depth) + 1;
         const newUnnecessaryFields = populate.slice(2, populate.length).filter(item => !item.startsWith('.')) ?? [];
         const specificFields = populate.slice(2, populate.length).filter(item => item.startsWith('.')).map(item => item.substring(1)) ?? [];
 
         unnecessaryFields = unnecessaryFields.filter(field => !newUnnecessaryFields.includes(field));
-        const modelObject = setFalseNoMedia(getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []));
 
         if (newUnnecessaryFields.includes('imageFormats')) imageFormats = !imageFormats;
         if (newUnnecessaryFields.includes('imageInline')) imageInline = true;
+
+        if (imageInline) depth = Number(depth) + 1;
+        const modelObject = setFalseNoMedia(getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []), imageInline);
 
         // event.params.populate = modelObject.populate // This line was removed kuz generated a response with the full data. It consumes a lot of memory processing data and it's not necessary.
         await customResponseGenerator(
