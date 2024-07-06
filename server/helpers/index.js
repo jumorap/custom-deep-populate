@@ -31,18 +31,30 @@ const populateKey = (populate, key, value, maxDepth, ignore) => {
 
   switch (value.type) {
     case "component":
-      populate[key] = getFullPopulateObject(value.component, maxDepth - 1);
+      populate[key] = {
+        pushOn: getFullPopulateObject(value.component, maxDepth - 1),
+        type: value.type
+      };
       break;
     case "dynamiczone":
       const dynamicPopulate = getDynamicPopulate(value.components, maxDepth);
-      populate[key] = isEmpty(dynamicPopulate) ? true : dynamicPopulate;
+      populate[key] = {
+        pushOn: isEmpty(dynamicPopulate) ? true : dynamicPopulate,
+        type: value.type
+      };
       break;
     case "relation":
       const relationPopulate = getRelationPopulate(value.target, key, maxDepth, ignore);
-      if (relationPopulate) populate[key] = relationPopulate;
+      if (relationPopulate) populate[key] = {
+        pushOn: relationPopulate,
+        type: value.type
+      };
       break;
     case "media":
-      populate[key] = true;
+      populate[key] = {
+        pushOn: true,
+        type: value.type
+      };
       break;
   }
 
@@ -111,6 +123,56 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) =>
   return isEmpty(populate) ? true : { populate };
 };
 
+const setFalseNoMedia = (model) => {
+  /**
+   * Reach the deepest level of the model object in each key and set the pushOn to false in each child
+   * if the type of each child is not media and the field pushOn is not an object
+   * @param model - The model object
+   * @returns {Object} - The model object with the pushOn value as the field value in each key
+   */
+  const keys = Object.keys(model.populate);
+  for (const element of keys) {
+    const key = element;
+    const value = model.populate[key];
+    if (value.type !== 'media' && typeof value.pushOn !== 'object') {
+      if (value.type !== 'relation') {
+        model.populate[key].pushOn = false;
+        delete model.populate[key].pushOn;
+      }
+    } else if (value.type === 'component') {
+      setFalseNoMedia(value.pushOn);
+    }
+  }
+
+  return redefinePushOnFields(model);
+};
+
+const redefinePushOnFields = (model) => {
+  /**
+   * Browse the model and set the pushOn value as the field value in each key
+   * F.E: { "hero": { "pushOn": true, "type": "component" } } => { "hero": true }
+   * F.E: { "hero": { "pushOn": { "populate": { "image": { "pushOn": true, "type": "media" } } }, "type": "component" } } => { "hero": { "populate" { "image": true } } }
+   * F.E: {"imagebase": { "pushOn": true, "type": "media" } } => { "imagebase": true }
+   * F.E: { "imagecomponent": { "pushOn": { "populate": { "imageincomponent": { "pushOn": true, "type": "media" }, "image4": { "pushOn": { "populate": { "image4": { "pushOn": true, "type": "media" }, "hero": { "pushOn": true, "type": "component" } } }, "type": "component" }, "hero": { "pushOn": { "populate": { "image": { "pushOn": true, "type": "media" }, "icon": { "pushOn": true, "type": "relation" } } }, "type": "component" } } }, "type": "component" } } => { "imagecomponent": { "populate": { "imageincomponent": true, "image4": { "populate": { "image4": true, "hero": true } }, "hero": { "populate": { "image": true, "icon": true } } } } }
+   * @param model - The model object
+   * @returns {Object} - The model object with the pushOn value as the field value in each key
+   */
+  const result = {};
+
+  const populateKeys = Object.keys(model.populate);
+  populateKeys.forEach(key => {
+    const value = model.populate[key];
+    if (typeof value.pushOn === 'boolean') {
+      result[key] = value.pushOn;
+    } else if (typeof value.pushOn === 'object' && value.pushOn.populate) {
+      result[key] = redefinePushOnFields(value.pushOn);
+    }
+  });
+
+  return {populate: result};
+};
+
 module.exports = {
-  getFullPopulateObject
+  getFullPopulateObject,
+  setFalseNoMedia
 };

@@ -33,6 +33,8 @@ const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
   if (obj?.height && obj?.width && obj?.url) {
     let newObject = {};
 
+    if (imageInline) return obj.url;
+
     keepFields.forEach(field => {
       if (obj[field]) newObject[field] = obj[field];
     });
@@ -43,8 +45,6 @@ const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
       newObject.urlS = obj.formats?.small?.url;
       newObject.urlL = obj.formats?.large?.url;
     }
-
-    if (imageInline) newObject = newObject.url
 
     return newObject;
   }

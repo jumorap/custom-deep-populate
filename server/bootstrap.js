@@ -1,6 +1,6 @@
 'use strict';
 
-const { getFullPopulateObject } = require('./helpers');
+const { getFullPopulateObject, setFalseNoMedia } = require('./helpers');
 const { customResponseGenerator } = require('./custom-response');
 
 // REWRITTEN OVER "strapi-plugin-populate-deep": "^3.0.1",
@@ -21,12 +21,13 @@ module.exports = async ({ strapi }) => {
       const defaultDepth = strapi.plugin('custom-deep-populate')?.config('defaultDepth') || 10;
 
       if (populate && populate[0] === 'custom') {
-        const depth = populate[1] ?? defaultDepth;
+        let depth = populate[1] ?? defaultDepth;
+        depth = Number(depth) + 1;
         const newUnnecessaryFields = populate.slice(2, populate.length).filter(item => !item.startsWith('.')) ?? [];
         const specificFields = populate.slice(2, populate.length).filter(item => item.startsWith('.')).map(item => item.substring(1)) ?? [];
 
         unnecessaryFields = unnecessaryFields.filter(field => !newUnnecessaryFields.includes(field));
-        const modelObject = getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []);
+        const modelObject = setFalseNoMedia(getFullPopulateObject(event.model.uid, depth, unnecessaryFields, []));
 
         if (newUnnecessaryFields.includes('imageFormats')) imageFormats = !imageFormats;
         if (newUnnecessaryFields.includes('imageInline')) imageInline = true;
