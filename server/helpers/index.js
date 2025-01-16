@@ -38,7 +38,12 @@ const populateKey = (populate, key, value, maxDepth, ignore) => {
       populate[key] = isEmpty(dynamicPopulate) ? true : dynamicPopulate;
       break;
     case "relation":
-      const relationPopulate = getRelationPopulate(value.target, key, maxDepth, ignore);
+      const relationPopulate = getRelationPopulate(
+        value.target,
+        key,
+        maxDepth,
+        ignore
+      );
       if (relationPopulate) populate[key] = relationPopulate;
       break;
     case "media":
@@ -47,7 +52,7 @@ const populateKey = (populate, key, value, maxDepth, ignore) => {
   }
 
   return populate;
-}
+};
 
 const getDynamicPopulate = (components, maxDepth) => {
   /**
@@ -73,12 +78,17 @@ const getRelationPopulate = (target, key, maxDepth, ignore) => {
    */
   return getFullPopulateObject(
     target,
-    (key === 'localizations') && maxDepth > 2 ? 1 : maxDepth - 1,
+    key === "localizations" && maxDepth > 2 ? 1 : maxDepth - 1,
     ignore
   );
 };
 
-const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) => {
+const getFullPopulateObject = (
+  modelUid,
+  maxDepth = 20,
+  ignore = [],
+  specific = []
+) => {
   /**
    * Get the populated object for the given modelUid and maxDepth level, ignoring the given collection
    * names in the 'ignore' array if provided
@@ -87,7 +97,9 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) =>
    * @param {Array} ignore - The collection names to ignore
    * @returns {Object} - The populated object
    */
-  const skipCreatorFields = strapi.plugin('custom-deep-populate')?.config('skipCreatorFields');
+  const skipCreatorFields = strapi
+    .plugin("custom-deep-populate")
+    ?.config("skipCreatorFields");
 
   if (maxDepth <= 1) return true;
   if (modelUid === "admin::user" && skipCreatorFields) return undefined;
@@ -95,7 +107,8 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) =>
   let populate = {};
   const model = strapi.getModel(modelUid);
 
-  if (ignore && !ignore.includes(model.collectionName)) ignore.push(model.collectionName);
+  if (ignore && !ignore.includes(model.collectionName))
+    ignore.push(model.collectionName);
 
   for (const [key, value] of Object.entries(
     getModelPopulationAttributes(model)
@@ -105,12 +118,13 @@ const getFullPopulateObject = (modelUid, maxDepth=20, ignore=[], specific=[]) =>
       populate = populateKey(populate, key, value, maxDepth, ignore);
       continue;
     }
-    if (specific.length === 0) populate = populateKey(populate, key, value, maxDepth, ignore);
+    if (specific.length === 0)
+      populate = populateKey(populate, key, value, maxDepth, ignore);
   }
 
   return isEmpty(populate) ? true : { populate };
 };
 
 module.exports = {
-  getFullPopulateObject
+  getFullPopulateObject,
 };
