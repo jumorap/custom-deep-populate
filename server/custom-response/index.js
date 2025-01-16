@@ -1,10 +1,20 @@
-const fs = require('fs');
-const files = fs.readdirSync('./src/api');
-const { getFullPopulateObject } = require('../helpers');
-
+const fs = require("fs");
+const files = fs.readdirSync("./src/api");
+const { getFullPopulateObject } = require("../helpers");
 
 let speFields = [];
-
+let errorNotFound = (ctx) => ({
+  data: null,
+  error: {
+    status: 404,
+    name: "NotFoundError",
+    message: "Not Found",
+    details: {
+      path: ctx.request.url,
+      message: "The requested resource could not be found",
+    },
+  },
+});
 
 const removeGenericFields = (obj, fields) => {
   /**
@@ -13,12 +23,12 @@ const removeGenericFields = (obj, fields) => {
    * @param {Array} fields - The fields to be removed from the object
    * @returns {Object} - The object cleaned
    */
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (obj[field]) delete obj[field];
   });
 
   return obj;
-}
+};
 
 const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
   /**
@@ -33,9 +43,7 @@ const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
   if (obj?.height && obj?.width && obj?.url) {
     let newObject = {};
 
-    if (imageInline) return obj.url;
-
-    keepFields.forEach(field => {
+    keepFields.forEach((field) => {
       if (obj[field]) newObject[field] = obj[field];
     });
 
@@ -46,11 +54,13 @@ const removeImageFields = (obj, keepFields, imageFormats, imageInline) => {
       newObject.urlL = obj.formats?.large?.url;
     }
 
+    if (imageInline) newObject = newObject.url;
+
     return newObject;
   }
 
   return obj;
-}
+};
 
 const removeSameNameInNestedFields = (obj, collection) => {
   /**
@@ -61,14 +71,19 @@ const removeSameNameInNestedFields = (obj, collection) => {
    * @returns {Object} - The object with the child replaced if the child has the same key as the child's child
    */
   for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null && key in obj[key] && collection.includes(key)) {
+    if (
+      typeof obj[key] === "object" &&
+      obj[key] !== null &&
+      key in obj[key] &&
+      collection.includes(key)
+    ) {
       obj[key] = obj[key][key];
       removeSameNameInNestedFields(obj, collection);
     }
   }
 
   return obj;
-}
+};
 
 const removeCollectionNamesInNested = (obj, collection) => {
   /**
@@ -81,14 +96,15 @@ const removeCollectionNamesInNested = (obj, collection) => {
    * @returns {Object} - The object with the child replaced if the child has the same key as the child's child
    */
   for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
       const childKeys = Object.keys(obj[key]);
-      if (childKeys.length === 1 && collection.includes(childKeys[0])) obj[key] = obj[key][childKeys[0]];
+      if (childKeys.length === 1 && collection.includes(childKeys[0]))
+        obj[key] = obj[key][childKeys[0]];
     }
   }
 
   return obj;
-}
+};
 
 const cleanEmpty = (arrFields) => {
   /**
@@ -96,14 +112,15 @@ const cleanEmpty = (arrFields) => {
    * @param {Array} arrFields - The array to be cleaned
    * @returns {Array} - The cleaned array
    */
-  return arrFields.filter(field => {
+  return arrFields.filter((field) => {
     for (const key in field) {
       if (Array.isArray(field[key]) && field[key].length > 0) return true;
-      if (typeof field[key] === 'object' && Object.keys(field[key]).length > 0) return true;
+      if (typeof field[key] === "object" && Object.keys(field[key]).length > 0)
+        return true;
     }
     return false;
-  })
-}
+  });
+};
 
 const getSpecificFields = (obj, fields) => {
   /**
@@ -113,12 +130,12 @@ const getSpecificFields = (obj, fields) => {
    * @returns {Object} - The object with the specific fields
    */
   const newObj = {};
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (obj[field]) newObj[field] = obj[field];
   });
 
   if (Object.keys(newObj).length > 0) speFields.push(newObj);
-}
+};
 
 const objectCustomizer = (
   obj,
@@ -158,16 +175,25 @@ const objectCustomizer = (
           imageInline
         );
 
-    if (fieldsToRemove.length > 0) obj = removeGenericFields(obj, fieldsToRemove);
-    if (removeNestedFieldsWithSameName) obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
-    if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName) obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
-    if (pickedFieldsInImage.length > 0) obj = removeImageFields(obj, pickedFieldsInImage, imageFormats, imageInline);
+    if (fieldsToRemove.length > 0)
+      obj = removeGenericFields(obj, fieldsToRemove);
+    if (removeNestedFieldsWithSameName)
+      obj = removeSameNameInNestedFields(obj, collectionNSingleTypes);
+    if (collectionNSingleTypes.length > 0 && removeNestedFieldsWithSameName)
+      obj = removeCollectionNamesInNested(obj, collectionNSingleTypes);
+    if (pickedFieldsInImage.length > 0)
+      obj = removeImageFields(
+        obj,
+        pickedFieldsInImage,
+        imageFormats,
+        imageInline
+      );
 
     if (specificFields.length > 0) getSpecificFields(obj, specificFields);
   }
 
   return obj;
-}
+};
 
 const makeQueries = async (strapi, event, model, apiRefUid) => {
   /**
@@ -177,17 +203,43 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
    * @param {Object} model - The model to be populated
    */
   let setWhere = event.params?.where; // {} -> locale, etc...
-  const publishFalse = {publishedAt: { '$null': false }};
+  const publishFalse = { publishedAt: { $null: false } };
+  const ctx = strapi.requestContext.get();
 
   if (!setWhere) setWhere = { $and: [publishFalse] };
-  else if (setWhere?.$and) setWhere = { $and: [...setWhere?.$and, publishFalse] };
+  else if (setWhere?.$and)
+    setWhere = { $and: [...setWhere?.$and, publishFalse] };
 
   event.params.populate = model;
   event.params.where = setWhere;
 
-  const whereIdentifiers = ['$not', '$eq', '$eqi', '$ne', '$nei', '$in', '$notIn', '$lt', '$lte', '$gt', '$gte', '$nin', '$between', '$contains', '$notContains', '$containsi', '$notContainsi', '$startsWith', '$endsWith', '$null', '$notNull'];
+  const whereIdentifiers = [
+    "$not",
+    "$eq",
+    "$eqi",
+    "$ne",
+    "$nei",
+    "$in",
+    "$notIn",
+    "$lt",
+    "$lte",
+    "$gt",
+    "$gte",
+    "$nin",
+    "$between",
+    "$contains",
+    "$notContains",
+    "$containsi",
+    "$notContainsi",
+    "$startsWith",
+    "$endsWith",
+    "$null",
+    "$notNull",
+  ];
   const whereSave = JSON.stringify(event.params.where);
-  const whereHasEqOrIn = whereIdentifiers.some(identifier => whereSave.includes(identifier));
+  const whereHasEqOrIn = whereIdentifiers.some((identifier) =>
+    whereSave.includes(identifier)
+  );
   let queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   // IMPORTANT!
   // When the query doesn't match with the 'where' clause in db,
@@ -197,8 +249,10 @@ const makeQueries = async (strapi, event, model, apiRefUid) => {
     queryResponse = await strapi.db.query(apiRefUid).findMany(event.params);
   }
 
+  if (queryResponse.length === 0) ctx.send(errorNotFound(ctx));
+
   return queryResponse.length > 1 ? queryResponse : queryResponse[0];
-}
+};
 
 const getMeta = async (event, apiRefUid) => {
   /**
@@ -208,20 +262,22 @@ const getMeta = async (event, apiRefUid) => {
    * @returns {Object} - The meta object
    */
   if (event?.params?.limit) {
-    const [data, counter] = await strapi.db.query(apiRefUid).findWithCount({limit: 1});
+    const [data, counter] = await strapi.db
+      .query(apiRefUid)
+      .findWithCount({ limit: 1 });
 
     return {
-      pagination:{
+      pagination: {
         pageSize: event?.params?.limit,
         page: event?.params?.offset + 1,
         total: counter,
-        pageCount: Math.ceil(counter / event?.params?.limit)
-      }
+        pageCount: Math.ceil(counter / event?.params?.limit),
+      },
     };
   }
 
   return {};
-}
+};
 
 const customResponseGenerator = async (
   strapi,
@@ -251,49 +307,66 @@ const customResponseGenerator = async (
    * @param {Boolean} imageInline - If true, the field 'url' will be kept as string
    */
   const ctx = strapi.requestContext.get();
-  const collectionNSingleTypes = files.slice(1, files.length).map(file => file);
+  const collectionNSingleTypes = files
+    .slice(1, files.length)
+    .map((file) => file);
 
-  const queryResponseCleaned = await makeQueries(strapi, event, model, apiRefUid);
-  const meta = await getMeta(event, apiRefUid);
-  let specificResponse = {};
-
-  const cleanedResponse = objectCustomizer(
-    queryResponseCleaned,
-    unnecessaryFields,
-    pickedFieldsInImage,
-    removeNestedFieldsWithSameName,
-    collectionNSingleTypes,
-    [],
-    imageFormats,
-    imageInline
+  const queryResponseCleaned = await makeQueries(
+    strapi,
+    event,
+    model,
+    apiRefUid
   );
+  if (queryResponseCleaned) {
+    const meta = await getMeta(event, apiRefUid);
+    let specificResponse = {};
 
-  if (specificFields.length > 0) {
-    const newModel = getFullPopulateObject(apiRefUid, depth, unnecessaryFields, []);
-    const strapiResponse = await strapi.db.query(apiRefUid).findMany({populate: newModel.populate, where: { $and: [{publishedAt: { '$null': false }}] }});
-
-    objectCustomizer(
-      strapiResponse,
+    const cleanedResponse = objectCustomizer(
+      queryResponseCleaned,
       unnecessaryFields,
       pickedFieldsInImage,
       removeNestedFieldsWithSameName,
       collectionNSingleTypes,
-      specificFields,
+      [],
       imageFormats,
       imageInline
     );
 
-    specificResponse = cleanEmpty(JSON.parse(JSON.stringify(speFields)));
-    speFields = [];
-  }
+    if (specificFields.length > 0) {
+      const newModel = getFullPopulateObject(
+        apiRefUid,
+        depth,
+        unnecessaryFields,
+        []
+      );
+      const strapiResponse = await strapi.db.query(apiRefUid).findMany({
+        populate: newModel.populate,
+        where: { $and: [{ publishedAt: { $null: false } }] },
+      });
 
-  ctx.send({
-    customData: (cleanedResponse || []),
-    meta: meta,
-    specific: specificResponse
-  });
+      objectCustomizer(
+        strapiResponse,
+        unnecessaryFields,
+        pickedFieldsInImage,
+        removeNestedFieldsWithSameName,
+        collectionNSingleTypes,
+        specificFields,
+        imageFormats,
+        imageInline
+      );
+
+      specificResponse = cleanEmpty(JSON.parse(JSON.stringify(speFields)));
+      speFields = [];
+    }
+
+    ctx.send({
+      customData: cleanedResponse || [],
+      meta: meta,
+      specific: specificResponse,
+    });
+  }
 };
 
 module.exports = {
-  customResponseGenerator
+  customResponseGenerator,
 };

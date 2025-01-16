@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const bootstrap = require('./bootstrap');
-const config = require('./config');
+const bootstrap = require("./bootstrap");
+const config = require("./config");
 
 module.exports = () => ({
   bootstrap,
